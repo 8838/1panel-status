@@ -1,0 +1,25 @@
+{
+  "servers": [
+    {
+      "name": "vps",
+      "host": "1.1.1.1",
+      "port": 12345,
+      "https": false,
+      "apiKey": "xxxxx"
+    },
+    {
+      "name": "vps2",
+      "host": "2.2.2.2",
+      "port": 12345,
+      "https": false,
+      "apiKey": "xxxxx"
+    },
+    {
+      "name": "vps",
+      "host": "3.3.3.3",
+      "port": 12345,
+      "https": false,
+      "apiKey": "xxxxx"
+    }
+  ]
+}
