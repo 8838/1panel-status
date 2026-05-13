@@ -69,6 +69,8 @@ config.json示例里有3个服务器配置，你可以根据自己服务器数�
 docker compose up -d --build
 ```
 
+Nginx反代 `http://127.0.0.1:5285` 后即可看到状态页面
+
 ## 修改config.json配置后重启
 
 修改 `config.json` 后，需重启容器让其重新加载配置：
