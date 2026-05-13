@@ -63,7 +63,7 @@ config.json示例里有3个服务器配置，你可以根据自己服务器数�
 1. 被监控服务器的1panel面板里放行1panel-status所在的服务器IP，过期时间设为0，
 2. 如果1panel-status监控本机的1panel，放行1panel-status的容器IP
 
-## 构建并启动Docker Compise
+## 构建并启动Docker Compose
 
 ```bash
 docker compose up -d --build
