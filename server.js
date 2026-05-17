@@ -25,7 +25,7 @@ try {
 const cache = new Map();
 servers.forEach((s, i) => {
   s.id = 's' + i;
-  cache.set(s.id, { prev: null, cur: null, online: false, bootTimeMs: null });
+  cache.set(s.id, { prev: null, cur: null, online: false, bootTimeMs: null, staticCpu: null });
 });
 
 function md5(s){ return crypto.createHash('md5').update(s).digest('hex'); }
@@ -73,9 +73,18 @@ function panelGet(server, panelPath){
   });
 }
 
-function sanitize(base){
+function extractStaticCpu(base){
   if (!base) return null;
-  const c = base.currentInfo || {};
+  return {
+    model:        String(base.cpuModelName || ''),
+    cores:        Number(base.cpuCores)        || 0,
+    logicalCores: Number(base.cpuLogicalCores) || 0,
+    mhz:          Number(base.cpuMhz)          || 0,
+  };
+}
+
+function sanitizeCurrent(c){
+  if (!c) return null;
 
   let diskTotal = 0, diskUsed = 0, diskFree = 0;
   if (Array.isArray(c.diskData)){
@@ -87,26 +96,16 @@ function sanitize(base){
   }
   const diskPct = diskTotal > 0 ? (diskUsed / diskTotal) * 100 : 0;
 
-  const memTotal     = Number(c.memoryTotal)     || 0;
-  const memUsed      = Number(c.memoryUsed)      || 0;
-  const memAvailable = Number(c.memoryAvailable) || 0;
-
   return {
     sampledAt: Date.now(),
     timeSinceUptime: c.timeSinceUptime || '',
 
-    cpu: {
-      pct:          Number(c.cpuUsedPercent) || 0,
-      model:        String(base.cpuModelName || ''),
-      cores:        Number(base.cpuCores)        || 0,
-      logicalCores: Number(base.cpuLogicalCores) || 0,
-      mhz:          Number(base.cpuMhz)          || 0,
-    },
+    cpuPct: Number(c.cpuUsedPercent) || 0,
     mem: {
       pct:       Number(c.memoryUsedPercent) || 0,
-      total:     memTotal,
-      used:      memUsed,
-      available: memAvailable,
+      total:     Number(c.memoryTotal)     || 0,
+      used:      Number(c.memoryUsed)      || 0,
+      available: Number(c.memoryAvailable) || 0,
     },
     disk: {
       pct:   diskPct,
@@ -130,9 +129,18 @@ function sanitize(base){
 async function pollOne(server){
   const slot = cache.get(server.id);
   try {
-    const data = await panelGet(server, `/api/v2/dashboard/base/all/all`);
-    const m = sanitize(data);
-    if (!m) throw new Error('empty response');
+    let currentInfo;
+    if (!slot.staticCpu){
+      const base = await panelGet(server, `/api/v2/dashboard/base/all/all`);
+      if (!base) throw new Error('empty response');
+      slot.staticCpu = extractStaticCpu(base);
+      currentInfo = base.currentInfo;
+    } else {
+      currentInfo = await panelGet(server, `/api/v2/dashboard/current/all/all`);
+    }
+
+    const m = sanitizeCurrent(currentInfo);
+    if (!m) throw new Error('empty current');
     slot.prev = slot.cur;
     slot.cur = m;
     slot.online = true;
@@ -143,6 +151,7 @@ async function pollOne(server){
     }
   } catch (e) {
     slot.online = false;
+    slot.staticCpu = null;
   }
 }
 
@@ -162,12 +171,19 @@ function publicPayload(){
         upRate   = Math.max(0, (cur.net.sentTotal - slot.prev.net.sentTotal) / dt);
       }
     }
+    const sc = slot.staticCpu;
     return {
       name: s.name,
       online: slot.online,
       bootTimeMs: slot.bootTimeMs ?? null,
       metrics: cur ? {
-        cpu:  cur.cpu,
+        cpu: {
+          pct:          cur.cpuPct,
+          model:        sc ? sc.model : '',
+          cores:        sc ? sc.cores : 0,
+          logicalCores: sc ? sc.logicalCores : 0,
+          mhz:          sc ? sc.mhz : 0,
+        },
         mem:  cur.mem,
         disk: cur.disk,
         load: cur.load,
