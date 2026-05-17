@@ -1,16 +1,14 @@
 services:
   1panel-status:
     build: .
-    # 或者直接用预构建镜像:
-    # image: node:20-alpine
     container_name: 1panel-status
     restart: unless-stopped
     network_mode: bridge
     ports:
-      - "127.0.0.1:5285:5285"        # 改成你想对外暴露的端口
+      - "127.0.0.1:5285:5285"
     volumes:
-      # 把服务器列表挂载进去；改 config.json 不需要重建镜像，重启容器即可
       - ./config.json:/app/config.json:ro
+      - ./index.html:/app/index.html:ro
     environment:
       - PORT=5285
       - REQ_TIMEOUT_MS=6000

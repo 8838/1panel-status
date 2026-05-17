@@ -7,11 +7,6 @@
 <title>服务器状态</title>
 <style>
   :root{
-    /* ── dark theme (default) ──────────────────────────────────────────
-       Variables are split into two groups:
-       1. Color tokens — overridden in the light-mode block below.
-       2. Non-color tokens (fonts, sizes) — single source of truth.       */
-
     --bg: #0c0d10;
     --panel: #16181f;
     --panel-2: #1c1f27;
@@ -27,54 +22,26 @@
     --ok: #8af0a4;
     --ring-bg: #21242d;
 
-    /* Background ambience: two soft tinted glows in opposite corners. In
-       dark mode they're barely-there hints of the accent palette; in light
-       mode we tune them way down so the page reads as crisp, not muddy.   */
     --glow-1: rgba(200,255,62,.05);
     --glow-2: rgba(90,209,255,.04);
-
-    /* Card-corner highlight (the diagonal radial inside .card::after).
-       Same idea — visible in dark, near-zero in light.                    */
     --card-glow: rgba(200,255,62,.04);
-
-    /* Brand dot glow and the ok-state pill dot glow. CSS box-shadow with
-       a non-zero blur. In light mode we kill it so the dot doesn't smear
-       on a white background.                                              */
     --dot-glow: 0 0 10px var(--accent);
     --ok-glow:  0 0 6px var(--ok);
     --ok-glow-sm: 0 0 5px var(--ok);
-
-    /* Subtle "inset"-feeling tint for badges sitting on top of the card.
-       Dark theme: a faint black wash. Light theme: a faint grey wash.    */
     --inset-tint: rgba(0,0,0,.2);
+
+    --tip-bg: #1a1d25;
+    --tip-border: #2e333f;
+    --tip-shadow: 0 12px 32px rgba(0,0,0,.55), 0 2px 8px rgba(0,0,0,.4);
 
     --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
                "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
     --font-num: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
                 "Liberation Mono", "Courier New", monospace;
 
-    --card-max: 720px;
+    --card-max: 860px;
   }
 
-  /* ── light theme ────────────────────────────────────────────────────
-     Triggered automatically by the OS / browser preference. We don't ship
-     a manual toggle — the page is small, single-purpose, and following
-     system theme is the least-surprise default for an internal dashboard.
-
-     Design notes:
-     - Background is a near-white off-grey (#f6f7f9), cards are pure white
-       so the depth hierarchy still reads. Pure-white background would be
-       too clinical and lose the card-vs-page separation.
-     - The neon-green --accent (#8b5cf6) is unreadable on a near-white
-       surface — bright fluorescent colors need a dark background. We
-       swap to a deep saturated green (#a8e635) that keeps the "lime"
-       identity but actually has contrast. Same logic for --accent-2 /
-       --accent-3: pulled toward more saturated, lower-luminance versions.
-     - --ring-bg switches from near-black to a soft light grey so the
-       unfilled portion of the donut reads as "empty" instead of "filled
-       with white" (which would be confusing on a white card).
-     - All glows are zeroed out: glow effects look cheap on light
-       backgrounds and tend to read as smudges, not light.                */
   @media (prefers-color-scheme: light){
     :root{
       --bg: #f6f7f9;
@@ -84,12 +51,12 @@
       --text: #1a1c22;
       --text-dim: #5a5e69;
       --text-mute: #9095a0;
-      --accent: #a8e635;       /* deep lime, readable on white */
-      --accent-2: #d94e2b;     /* warm orange-red */
-      --accent-3: #0a8ec7;     /* deep cyan */
-      --warn: #c98a00;         /* amber */
-      --danger: #d62c3d;       /* red */
-      --ok: #2a9e4f;           /* green */
+      --accent: #a8e635;
+      --accent-2: #d94e2b;
+      --accent-3: #0a8ec7;
+      --warn: #c98a00;
+      --danger: #d62c3d;
+      --ok: #2a9e4f;
       --ring-bg: #e6e8ec;
 
       --glow-1: transparent;
@@ -99,6 +66,10 @@
       --ok-glow: none;
       --ok-glow-sm: none;
       --inset-tint: rgba(0,0,0,.03);
+
+      --tip-bg: #ffffff;
+      --tip-border: #d8dbe1;
+      --tip-shadow: 0 10px 28px rgba(20,25,40,.14), 0 2px 6px rgba(20,25,40,.08);
     }
   }
 
@@ -122,7 +93,6 @@
     padding: 32px 24px 56px;
   }
 
-  /* ── header ───────────────────────────── */
   header{
     display:flex; justify-content:space-between; align-items:flex-end;
     gap:24px; padding-bottom:18px;
@@ -160,15 +130,13 @@
     background:var(--ok); box-shadow:var(--ok-glow);
   }
 
-  /* ── stack of cards (one per row) ─────── */
   .stack{ display:flex; flex-direction:column; gap:14px; }
 
-  /* ── card ─────────────────────────────── */
   .card{
     background:linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
     border:1px solid var(--line);
     border-radius:14px;
-    padding:14px 18px;
+    padding:18px 22px;
     position:relative;
     min-width:0;
   }
@@ -182,20 +150,19 @@
     border-bottom-right-radius:14px;
   }
 
-  /* ── card header (name + uptime badge) ── */
   .card-head{
     display:flex; align-items:center; justify-content:space-between;
-    gap:12px; margin-bottom:10px;
+    gap:12px; margin-bottom:14px;
   }
   .card-head .name{
-    font-size:17px; font-weight:600; letter-spacing:-.01em;
+    font-size:18px; font-weight:600; letter-spacing:-.01em;
     color:var(--text); line-height:1.2;
     min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
   .uptime-badge{
     display:inline-flex; align-items:center; gap:7px;
-    padding:4px 11px; border:1px solid var(--line); border-radius:99px;
-    font-size:11px; color:var(--text-dim);
+    padding:5px 12px; border:1px solid var(--line); border-radius:99px;
+    font-size:12px; color:var(--text-dim);
     background:var(--inset-tint);
     flex-shrink:0;
     font-family:var(--font-num);
@@ -209,28 +176,27 @@
   .uptime-badge.off{ color:var(--text-mute) }
   .uptime-badge.off::before{ background:var(--danger); box-shadow:none }
 
-  /* ── card body: rings (left) + traffic (right) on desktop ── */
   .card-body{
     display:grid;
     grid-template-columns: 1fr auto;
-    gap:18px;
+    gap:22px;
     align-items:center;
   }
 
-  /* ── rings row ─────────────────────────── */
   .rings{
     display:grid;
     grid-template-columns:repeat(4, 1fr);
-    gap:8px;
+    gap:10px;
     min-width:0;
   }
   .ring-cell{
     display:flex; align-items:center; justify-content:center;
     min-width:0;
+    cursor:default;
   }
   .ring{
     position:relative;
-    width:78px; height:78px;
+    width:96px; height:96px;
   }
   .ring svg{
     width:100%; height:100%;
@@ -256,47 +222,43 @@
   .ring .label .num{
     font-family:var(--font-num);
     font-weight:600;
-    font-size:16px;
+    font-size:21px;
     letter-spacing:-.03em;
     display:inline-flex; align-items:baseline; justify-content:center;
   }
   .ring .label .num small{
-    font-size:9px;
+    font-size:12px;
     color:var(--text-dim);
     font-weight:500;
-    margin-left:1px;
+    margin-left:2px;
   }
   .ring .label .cap{
-    margin-top:4px;
-    font-size:9.5px;
+    margin-top:5px;
+    font-size:11px;
     color:var(--text-mute);
     text-transform:uppercase;
     letter-spacing:.12em;
     font-weight:500;
   }
 
-  /* ── traffic block (right side on desktop) ──
-     Two rows: down on top, up on bottom. Each row reads like
-     "↓ 下行 12.50 MB/s · 1023.58 GB". No column heads, no divider line.
-     Sized to align visually with the rings to its left.                */
   .traffic{
     display:flex; flex-direction:column;
     justify-content:center;
-    gap:8px;
+    gap:9px;
     font-family:var(--font-num);
     white-space:nowrap;
   }
   .traffic .row{
-    display:flex; align-items:baseline; gap:8px;
+    display:flex; align-items:baseline; gap:9px;
   }
   .traffic .arrow{
-    font-weight:700; font-size:15px; line-height:1;
+    font-weight:700; font-size:16px; line-height:1;
     flex-shrink:0;
   }
   .traffic .down-arrow{ color:var(--accent-3) }
   .traffic .up-arrow  { color:var(--accent-2) }
   .traffic .label-inline{
-    font-size:10px;
+    font-size:11px;
     color:var(--text-mute);
     text-transform:uppercase;
     letter-spacing:.12em;
@@ -306,50 +268,34 @@
   }
   .traffic .val{
     font-weight:600;
-    font-size:15px;
+    font-size:16px;
     letter-spacing:-.01em;
     color:var(--text);
     font-variant-numeric: tabular-nums;
-    /* The value cell is a fixed-width row of [number][unit]. The number is
-       right-aligned in its own box so the decimal point sits at the same
-       column regardless of digit count; the unit is left-aligned so the
-       label start column doesn't jitter either. The widths below are sized
-       for the worst case the formatter can produce ("1023.99") and for the
-       longest unit suffix (" GB/s"). We deliberately don't use `ch` for the
-       number column because under tabular-nums digits are all the width of
-       "0" but the decimal point is narrower than "0" — using ch would
-       overshoot by ~0.5ch and look loose. `em` matches the actual rendered
-       advance much more closely.                                            */
     white-space:nowrap;
   }
   .traffic .val .val-num{
     display:inline-block;
     text-align:right;
-    /* 6 digits + 1 decimal point. Under tabular-nums each digit is 1ch and
-       the decimal point is roughly 0.35ch, total ~6.35ch ≈ 4em at this
-       font-size. Bumped to 4.1em to give the decimal point breathing room.   */
     min-width: 4.1em;
   }
   .traffic .val .val-unit{
     display:inline-block;
     text-align:left;
-    font-size:10.5px;
+    font-size:11px;
     color:var(--text-dim);
     font-weight:400;
     margin-left:2px;
-    /* Worst-case unit suffix in the formatter is " GB/s" (5 chars). At the
-       small font size that's ~2.6em — round up so totals (" GB", 3 chars)
-       still left-align under the same column.                               */
     min-width: 2.7em;
   }
   .traffic .val.rate.down{ color:var(--accent-3) }
   .traffic .val.rate.up  { color:var(--accent-2) }
   .traffic .sep{
-    color:var(--text-mute); font-size:11px;
+    color:var(--text-mute); font-size:12px;
     padding:0 2px;
   }
   .traffic .total-label{
-    font-size:10px;
+    font-size:11px;
     color:var(--text-mute);
     text-transform:uppercase;
     letter-spacing:.12em;
@@ -368,41 +314,101 @@
     color:var(--text-mute); font-size:11px;
     display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap;
   }
-  footer a{
-    color:var(--text-mute); text-decoration:none;
-    transition: color .2s;
-  }
-  footer a:hover{ color:var(--accent) }
 
-  /* ── narrow viewport ─────────────────── */
+  /* tooltip */
+  #tip{
+    position:fixed;
+    z-index:1000;
+    pointer-events:none;
+    background:var(--tip-bg);
+    border:1px solid var(--tip-border);
+    border-radius:10px;
+    padding:11px 13px;
+    box-shadow:var(--tip-shadow);
+    min-width:200px;
+    max-width:320px;
+    opacity:0;
+    transform:translateY(4px);
+    transition:opacity .12s ease, transform .12s ease;
+    font-size:12px;
+    color:var(--text);
+  }
+  #tip.show{ opacity:1; transform:translateY(0) }
+  #tip .tip-head{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:10px;
+    margin-bottom:8px;
+    padding-bottom:7px;
+    border-bottom:1px solid var(--line);
+  }
+  #tip .tip-title{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.14em;
+    color:var(--text-mute);
+    font-weight:600;
+  }
+  #tip .tip-pct{
+    font-family:var(--font-num);
+    font-size:13px;
+    font-weight:600;
+    color:var(--text);
+  }
+  #tip .tip-row{
+    display:flex; justify-content:space-between; align-items:baseline;
+    gap:14px;
+    padding:3px 0;
+  }
+  #tip .tip-row.stack{
+    flex-direction:column;
+    align-items:stretch;
+    gap:3px;
+  }
+  #tip .tip-row .k{
+    color:var(--text-mute);
+    font-size:11.5px;
+    flex-shrink:0;
+  }
+  #tip .tip-row .v{
+    font-family:var(--font-num);
+    color:var(--text);
+    font-size:12px;
+    text-align:right;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    max-width:200px;
+  }
+  #tip .tip-row.stack .v{
+    text-align:left;
+    white-space:normal;
+    word-break:break-word;
+    max-width:none;
+    line-height:1.35;
+  }
+  #tip .tip-row .v.dim{ color:var(--text-dim) }
+
   @media (max-width:560px){
     .wrap{ padding:20px 14px 36px }
     header{ flex-direction:column; align-items:flex-start; gap:12px }
 
     .card{ padding:12px 14px }
+    .card-head{ margin-bottom:10px }
     .card-head .name{ font-size:15px }
     .uptime-badge{ font-size:10.5px; padding:3px 9px }
 
-    /* phone: stack rings above traffic */
     .card-body{
       grid-template-columns: 1fr;
       gap:10px;
     }
-    .ring{ width:68px; height:68px }
-    .ring .label .num{ font-size:14px }
-    .ring .label .num small{ font-size:8px }
-    .ring .label .cap{ font-size:9px; margin-top:3px }
+    .rings{ gap:8px }
+    .ring{ width:70px; height:70px }
+    .ring .label .num{ font-size:15px }
+    .ring .label .num small{ font-size:9px }
+    .ring .label .cap{ font-size:9.5px; margin-top:3px }
 
-    /* traffic on phone: keep two-row layout (down, up).
-       Within each row, push the "总收/发 …" cluster to the right edge. */
-    .traffic{
-      gap:6px;
-    }
-    .traffic .row{
-      gap:6px;
-    }
-    /* The separator dot becomes a flex spacer that eats remaining width,
-       pushing the total cluster to the right. */
+    .traffic{ gap:6px }
+    .traffic .row{ gap:6px }
     .traffic .sep{
       flex:1;
       color:transparent;
@@ -410,6 +416,11 @@
     }
     .traffic .val{ font-size:14px }
     .traffic .arrow{ font-size:14px }
+    .traffic .label-inline,
+    .traffic .total-label{ font-size:10px }
+    .traffic .val .val-unit{ font-size:10px }
+
+    #tip{ max-width:260px; min-width:180px; font-size:11.5px }
   }
 </style>
 </head>
@@ -434,50 +445,54 @@
 
   <footer>
     <span>server.status · 每 2 秒刷新</span>
-    <a id="m-foot" href="https://github.com/8838/1panel-status" target="_blank" rel="noopener noreferrer">GitHub</a>
+    <span id="m-foot">—</span>
   </footer>
 </div>
+
+<div id="tip" role="tooltip" aria-hidden="true"></div>
 
 <script>
 const RING_R = 26;
 const RING_C = 2 * Math.PI * RING_R;
 
+const latest = { servers: [] };
+
 const fmt = {
-  // Byte formatter. Returns { num, unit } so callers can render the unit
-  // in a smaller style. Always keeps 2 decimal places so something like
-  // "1023.58 GB" survives intact instead of getting rounded to "1024 GB".
-  // (The old code only kept decimals for v < 100, which truncated big values.)
   bytesParts(n){
     if (n == null || isNaN(n) || n < 0) return { num:'—', unit:'' };
     const u = ['B','KB','MB','GB','TB','PB'];
     let i = 0, v = Number(n);
     while (v >= 1024 && i < u.length - 1){ v /= 1024; i++; }
-    // Bytes are integers; everything else gets 2 decimals.
     const num = (i === 0) ? String(Math.round(v)) : v.toFixed(2);
     return { num, unit: u[i] };
+  },
+  bytes(n){
+    const { num, unit } = fmt.bytesParts(n);
+    return num === '—' ? '—' : (num + ' ' + unit);
   },
   pctInt(n){
     if (n == null || isNaN(n)) return '—';
     return String(Math.round(Number(n)));
   },
-  // Uptime as whole days, computed as the difference between local calendar
-  // dates (Y/M/D), ignoring hours/minutes/seconds. Example: server booted
-  // 2026-05-12 23:00, now is 2026-05-13 01:00 → 1 day, not 0. This matches
-  // user intent ("已运行 N 天" as a date-difference, not a 24h-bucket count)
-  // and avoids the off-by-one near midnight that `floor(diffMs / 86400000)`
-  // would produce.
-  //
-  // bootTimeMs is the proxy's fixed parse of the server's reported boot time
-  // (server.js parses it once); we interpret both endpoints in the browser's
-  // local timezone, which is what the badge user is reading anyway.
+  pct2(n){
+    if (n == null || isNaN(n)) return '—';
+    return Number(n).toFixed(2) + '%';
+  },
+  num2(n){
+    if (n == null || isNaN(n)) return '—';
+    return Number(n).toFixed(2);
+  },
+  mhz(n){
+    if (n == null || isNaN(n) || n <= 0) return '—';
+    const v = Number(n);
+    if (v >= 1000) return (v / 1000).toFixed(2) + ' GHz';
+    return v.toFixed(0) + ' MHz';
+  },
   uptimeDays(bootTimeMs){
     if (bootTimeMs == null || isNaN(bootTimeMs)) return '—';
     const boot = new Date(Number(bootTimeMs));
     const now  = new Date();
     if (now < boot) return '—';
-    // Reduce each side to a midnight-local timestamp, then subtract. Using
-    // Date.UTC on the local Y/M/D triple sidesteps DST transitions (which
-    // would otherwise make some "days" 23 or 25 hours long).
     const a = Date.UTC(boot.getFullYear(), boot.getMonth(), boot.getDate());
     const b = Date.UTC(now.getFullYear(),  now.getMonth(),  now.getDate());
     return Math.round((b - a) / 86400000) + '天';
@@ -501,11 +516,9 @@ function escapeHtml(s){
   }[c]));
 }
 
-// ── ring builder ────────────────────────────────────────
-// caption is the text inside the ring, below the number
-function ringHTML(caption){
+function ringHTML(caption, kind){
   return `
-    <div class="ring-cell">
+    <div class="ring-cell" data-kind="${kind}">
       <div class="ring">
         <svg viewBox="0 0 64 64">
           <circle class="track" cx="32" cy="32" r="${RING_R}"></circle>
@@ -520,10 +533,10 @@ function ringHTML(caption){
   `;
 }
 
-function cardHTML(s){
+function cardHTML(s, idx){
   if (!s.online || !s.metrics){
     return `
-      <div class="card offline" data-name="${escapeHtml(s.name)}">
+      <div class="card offline" data-name="${escapeHtml(s.name)}" data-idx="${idx}">
         <div class="card-head">
           <div class="name">${escapeHtml(s.name)}</div>
           <span class="uptime-badge off">离线</span>
@@ -533,7 +546,7 @@ function cardHTML(s){
     `;
   }
   return `
-    <div class="card" data-name="${escapeHtml(s.name)}">
+    <div class="card" data-name="${escapeHtml(s.name)}" data-idx="${idx}">
       <div class="card-head">
         <div class="name">${escapeHtml(s.name)}</div>
         <span class="uptime-badge" data-uptime>—</span>
@@ -541,10 +554,10 @@ function cardHTML(s){
 
       <div class="card-body">
         <div class="rings">
-          ${ringHTML('CPU')}
-          ${ringHTML('内存')}
-          ${ringHTML('硬盘')}
-          ${ringHTML('负载')}
+          ${ringHTML('CPU',  'cpu')}
+          ${ringHTML('内存', 'mem')}
+          ${ringHTML('硬盘', 'disk')}
+          ${ringHTML('负载', 'load')}
         </div>
 
         <div class="traffic">
@@ -584,10 +597,6 @@ function setRing(cell, pct, valueText, unitText){
   }
 }
 
-// Render a byte value into an element. Splits number and unit into two
-// separately sized inline-blocks so the decimal point stays put as digit
-// count changes and the unit start column doesn't jitter either. See the
-// width comments in CSS for the sizing rationale.
 function setBytesField(el, bytes, perSec){
   if (!el) return;
   const { num, unit } = fmt.bytesParts(bytes);
@@ -600,20 +609,16 @@ function setBytesField(el, bytes, perSec){
 function paintCard(el, s){
   const m = s.metrics;
   const cells = el.querySelectorAll('.ring-cell');
-  // Load ring uses loadPct (instantaneous load%), not the 1-minute load avg.
-  setRing(cells[0], m.cpuPct,  fmt.pctInt(m.cpuPct),  '%');
-  setRing(cells[1], m.memPct,  fmt.pctInt(m.memPct),  '%');
-  setRing(cells[2], m.diskPct, fmt.pctInt(m.diskPct), '%');
-  setRing(cells[3], m.loadPct, fmt.pctInt(m.loadPct), '%');
+  setRing(cells[0], m.cpu.pct,  fmt.pctInt(m.cpu.pct),  '%');
+  setRing(cells[1], m.mem.pct,  fmt.pctInt(m.mem.pct),  '%');
+  setRing(cells[2], m.disk.pct, fmt.pctInt(m.disk.pct), '%');
+  setRing(cells[3], m.load.pct, fmt.pctInt(m.load.pct), '%');
 
-  setBytesField(el.querySelector('[data-down-rate]'),  m.downRate,     true);
-  setBytesField(el.querySelector('[data-up-rate]'),    m.upRate,       true);
-  setBytesField(el.querySelector('[data-down-total]'), m.netRecvTotal, false);
-  setBytesField(el.querySelector('[data-up-total]'),   m.netSentTotal, false);
+  setBytesField(el.querySelector('[data-down-rate]'),  m.net.downRate,  true);
+  setBytesField(el.querySelector('[data-up-rate]'),    m.net.upRate,    true);
+  setBytesField(el.querySelector('[data-down-total]'), m.net.recvTotal, false);
+  setBytesField(el.querySelector('[data-up-total]'),   m.net.sentTotal, false);
 
-  // Uptime: derived client-side from a fixed boot timestamp captured once on
-  // the proxy. bootTimeMs is null until the first successful poll for this
-  // server, in which case we show a dash rather than guessing.
   const ub = el.querySelector('[data-uptime]');
   if (ub){
     ub.textContent = fmt.uptimeDays(s.bootTimeMs);
@@ -621,49 +626,229 @@ function paintCard(el, s){
   }
 }
 
-// ── render loop ─────────────────────────────────
 let mounted = false;
 function render(servers){
   const stack = document.getElementById('stack');
 
-  // If server count or order changed, full re-mount (cheap, runs only on config change)
   const needFullMount =
     !mounted ||
     stack.children.length !== servers.length ||
     Array.from(stack.children).some((node, i) => node.dataset.name !== servers[i].name);
 
   if (needFullMount){
-    stack.innerHTML = servers.map(cardHTML).join('');
+    stack.innerHTML = servers.map((s, i) => cardHTML(s, i)).join('');
     mounted = true;
     servers.forEach((s, i) => {
       if (s.online && s.metrics) paintCard(stack.children[i], s);
     });
+    refreshTip();
     return;
   }
 
   servers.forEach((s, i) => {
     const node = stack.children[i];
+    node.dataset.idx = String(i);
     const wantOffline = !s.online || !s.metrics;
     const isOffline = node.classList.contains('offline');
     if (wantOffline !== isOffline){
-      node.outerHTML = cardHTML(s);
+      node.outerHTML = cardHTML(s, i);
       if (!wantOffline) paintCard(stack.children[i], s);
       return;
     }
     if (wantOffline) return;
     paintCard(node, s);
   });
+
+  refreshTip();
 }
+
+const tip = {
+  el: document.getElementById('tip'),
+  visible: false,
+  serverIdx: null,
+  kind: null,
+  lastX: 0,
+  lastY: 0,
+};
+
+function buildTipHTML(s, kind){
+  const m = s.metrics;
+  if (!m) return '';
+
+  if (kind === 'cpu'){
+    const c = m.cpu;
+    const rows = [
+      ['型号',   c.model || '—', { stack: true, dim: true }],
+      ['物理核心', c.cores ? c.cores + ' 核' : '—'],
+      ['逻辑核心', c.logicalCores ? c.logicalCores + ' 线程' : '—'],
+      ['频率',   fmt.mhz(c.mhz)],
+    ];
+    return tipShell('CPU', fmt.pct2(c.pct), rows);
+  }
+  if (kind === 'mem'){
+    const me = m.mem;
+    const rows = [
+      ['总量', fmt.bytes(me.total)],
+      ['已用', fmt.bytes(me.used)],
+      ['可用', fmt.bytes(me.available)],
+    ];
+    return tipShell('内存', fmt.pct2(me.pct), rows);
+  }
+  if (kind === 'disk'){
+    const d = m.disk;
+    const rows = [
+      ['总量', fmt.bytes(d.total)],
+      ['已用', fmt.bytes(d.used)],
+      ['可用', fmt.bytes(d.free)],
+    ];
+    return tipShell('硬盘', fmt.pct2(d.pct), rows);
+  }
+  if (kind === 'load'){
+    const l = m.load;
+    const rows = [
+      ['1 分钟',  fmt.num2(l.load1)],
+      ['5 分钟',  fmt.num2(l.load5)],
+      ['15 分钟', fmt.num2(l.load15)],
+    ];
+    return tipShell('负载', fmt.pct2(l.pct), rows);
+  }
+  return '';
+}
+
+function tipShell(title, pctText, rows){
+  const body = rows.map(([k, v, opts]) => {
+    const o = opts || {};
+    const rowCls = 'tip-row' + (o.stack ? ' stack' : '');
+    const vCls   = 'v' + (o.dim ? ' dim' : '');
+    const titleAttr = o.stack ? '' : ` title="${escapeHtml(v)}"`;
+    return `<div class="${rowCls}"><span class="k">${escapeHtml(k)}</span><span class="${vCls}"${titleAttr}>${escapeHtml(v)}</span></div>`;
+  }).join('');
+  return `
+    <div class="tip-head">
+      <span class="tip-title">${escapeHtml(title)}</span>
+      <span class="tip-pct">${escapeHtml(pctText)}</span>
+    </div>
+    ${body}
+  `;
+}
+
+function showTip(serverIdx, kind, x, y){
+  const s = latest.servers[serverIdx];
+  if (!s || !s.online || !s.metrics) return;
+  tip.serverIdx = serverIdx;
+  tip.kind = kind;
+  tip.el.innerHTML = buildTipHTML(s, kind);
+  tip.el.classList.add('show');
+  tip.el.setAttribute('aria-hidden', 'false');
+  tip.visible = true;
+  positionTip(x, y);
+}
+
+function hideTip(){
+  tip.visible = false;
+  tip.serverIdx = null;
+  tip.kind = null;
+  tip.el.classList.remove('show');
+  tip.el.setAttribute('aria-hidden', 'true');
+}
+
+function refreshTip(){
+  if (!tip.visible || tip.serverIdx == null || tip.kind == null) return;
+  const s = latest.servers[tip.serverIdx];
+  if (!s || !s.online || !s.metrics){ hideTip(); return; }
+  tip.el.innerHTML = buildTipHTML(s, tip.kind);
+}
+
+function positionTip(x, y){
+  tip.lastX = x;
+  tip.lastY = y;
+  const pad = 14;
+  const w = tip.el.offsetWidth;
+  const h = tip.el.offsetHeight;
+  let nx = x + pad;
+  let ny = y + pad;
+  if (nx + w + 6 > window.innerWidth)  nx = x - w - pad;
+  if (ny + h + 6 > window.innerHeight) ny = y - h - pad;
+  if (nx < 6) nx = 6;
+  if (ny < 6) ny = 6;
+  tip.el.style.left = nx + 'px';
+  tip.el.style.top  = ny + 'px';
+}
+
+const stackEl = document.getElementById('stack');
+
+function cellInfo(target){
+  const cell = target.closest('.ring-cell');
+  if (!cell) return null;
+  const card = cell.closest('.card');
+  if (!card || card.classList.contains('offline')) return null;
+  const idx = parseInt(card.dataset.idx, 10);
+  const kind = cell.dataset.kind;
+  if (isNaN(idx) || !kind) return null;
+  return { idx, kind };
+}
+
+let touchUntil = 0;
+function isTouchActive(){ return Date.now() < touchUntil; }
+
+stackEl.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'touch' || e.pointerType === 'pen'){
+    touchUntil = Date.now() + 700;
+  }
+});
+
+stackEl.addEventListener('mouseover', (e) => {
+  if (isTouchActive()) return;
+  const info = cellInfo(e.target);
+  if (!info) return;
+  showTip(info.idx, info.kind, e.clientX, e.clientY);
+});
+stackEl.addEventListener('mousemove', (e) => {
+  if (isTouchActive()) return;
+  if (!tip.visible) return;
+  const info = cellInfo(e.target);
+  if (!info){ hideTip(); return; }
+  if (info.idx !== tip.serverIdx || info.kind !== tip.kind){
+    showTip(info.idx, info.kind, e.clientX, e.clientY);
+  } else {
+    positionTip(e.clientX, e.clientY);
+  }
+});
+stackEl.addEventListener('mouseout', (e) => {
+  if (isTouchActive()) return;
+  const to = e.relatedTarget;
+  if (to && to.closest && to.closest('.ring-cell')) return;
+  hideTip();
+});
+
+stackEl.addEventListener('click', (e) => {
+  const info = cellInfo(e.target);
+  if (!info){ hideTip(); return; }
+  if (tip.visible && tip.serverIdx === info.idx && tip.kind === info.kind){
+    hideTip();
+  } else {
+    const rect = e.target.getBoundingClientRect();
+    showTip(info.idx, info.kind, rect.left + rect.width / 2, rect.top + rect.height / 2);
+  }
+});
+document.addEventListener('click', (e) => {
+  if (!tip.visible) return;
+  if (!e.target.closest('.ring-cell')) hideTip();
+});
+window.addEventListener('scroll', () => hideTip(), { passive: true });
+window.addEventListener('resize', () => hideTip());
 
 async function tick(){
   try {
     const r = await fetch('/api/servers', { cache:'no-store' });
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const servers = await r.json();
+    latest.servers = servers;
     render(servers);
     document.getElementById('m-count').textContent  = servers.length;
     document.getElementById('m-online').textContent = servers.filter(s => s.online).length;
     document.getElementById('m-time').textContent   = fmt.clock();
+    document.getElementById('m-foot').textContent   = '最后更新 ' + fmt.clock();
     const pill = document.getElementById('m-pill');
     pill.textContent = '运行中';
     pill.style.opacity = '1';

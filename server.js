@@ -1,26 +1,15 @@
-/**
- * 1panel.status — multi-server proxy for 1Panel
- *
- * Reads /app/config.json (mounted from host), polls each configured 1Panel
- * instance every 2 seconds, and exposes ONE sanitized endpoint to the browser:
- *
- *   GET /api/servers   → [{ name, online, metrics:{...} }, ...]
- *
- * The browser never sees API keys, hostnames, IPs, or anything identifying.
- * Only the user-chosen display name and the requested metrics leave the box.
- */
-
 const http = require('http');
 const https = require('https');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-// ───────────────────────── config ─────────────────────────
 const CONFIG_PATH = process.env.CONFIG_PATH || '/app/config.json';
 const LISTEN_PORT = parseInt(process.env.PORT || '5285', 10);
-const POLL_MS     = 2000;   // fixed 2-second poll cadence
+const POLL_MS     = 2000;
 const REQ_TIMEOUT = parseInt(process.env.REQ_TIMEOUT_MS || '6000', 10);
+const INDEX_PATH  = path.join(__dirname, 'index.html');
+const LOGO_PATH   = path.join(__dirname, 'logo.png');
 
 let servers = [];
 try {
@@ -33,14 +22,12 @@ try {
   process.exit(1);
 }
 
-// in-memory cache of latest sample per server (and previous one for rate calc)
-const cache = new Map();   // id → { prev, cur, online }
+const cache = new Map();
 servers.forEach((s, i) => {
   s.id = 's' + i;
-  cache.set(s.id, { prev: null, cur: null, online: false });
+  cache.set(s.id, { prev: null, cur: null, online: false, bootTimeMs: null });
 });
 
-// ───────────────────────── helpers ─────────────────────────
 function md5(s){ return crypto.createHash('md5').update(s).digest('hex'); }
 
 function panelGet(server, panelPath){
@@ -71,7 +58,6 @@ function panelGet(server, panelPath){
         }
         try {
           const parsed = JSON.parse(body);
-          // 1Panel wraps responses as { code, data, message } – unwrap if present
           const data = (parsed && Object.prototype.hasOwnProperty.call(parsed, 'data'))
             ? parsed.data
             : parsed;
@@ -87,13 +73,10 @@ function panelGet(server, panelPath){
   });
 }
 
-// Reduce the raw payload to ONLY the metrics we expose. Nothing identifying:
-// no mount paths, no device names, no IPs, no kernel info, etc.
-function sanitize(currentInfo){
-  if (!currentInfo) return null;
-  const c = currentInfo;
+function sanitize(base){
+  if (!base) return null;
+  const c = base.currentInfo || {};
 
-  // Aggregate disks: sum all partitions (no paths/devices leaked)
   let diskTotal = 0, diskUsed = 0, diskFree = 0;
   if (Array.isArray(c.diskData)){
     for (const d of c.diskData){
@@ -104,49 +87,62 @@ function sanitize(currentInfo){
   }
   const diskPct = diskTotal > 0 ? (diskUsed / diskTotal) * 100 : 0;
 
+  const memTotal     = Number(c.memoryTotal)     || 0;
+  const memUsed      = Number(c.memoryUsed)      || 0;
+  const memAvailable = Number(c.memoryAvailable) || 0;
+
   return {
-    sampledAt: Date.now(),                          // proxy clock, for rate calc
-    // Raw boot-time string from 1Panel (RFC3339 / ISO-like). Parsed once
-    // per server into a stable `bootTimeMs`; see pollOne(). The browser
-    // computes uptime as "now - bootTimeMs", not from a server uptime counter,
-    // so the badge ticks smoothly without poll-to-poll jitter.
+    sampledAt: Date.now(),
     timeSinceUptime: c.timeSinceUptime || '',
 
-    cpuPct:  Number(c.cpuUsedPercent) || 0,
-    memPct:  Number(c.memoryUsedPercent) || 0,
-    diskPct,
-    loadPct: Number(c.loadUsagePercent) || 0,       // instantaneous load %
-
-    // Cumulative network bytes since boot — used both for totals
-    // and as the basis for the per-second rate calc below.
-    netRecvTotal: Number(c.netBytesRecv) || 0,
-    netSentTotal: Number(c.netBytesSent) || 0,
+    cpu: {
+      pct:          Number(c.cpuUsedPercent) || 0,
+      model:        String(base.cpuModelName || ''),
+      cores:        Number(base.cpuCores)        || 0,
+      logicalCores: Number(base.cpuLogicalCores) || 0,
+      mhz:          Number(base.cpuMhz)          || 0,
+    },
+    mem: {
+      pct:       Number(c.memoryUsedPercent) || 0,
+      total:     memTotal,
+      used:      memUsed,
+      available: memAvailable,
+    },
+    disk: {
+      pct:   diskPct,
+      total: diskTotal,
+      used:  diskUsed,
+      free:  diskFree,
+    },
+    load: {
+      pct:    Number(c.loadUsagePercent) || 0,
+      load1:  Number(c.load1)  || 0,
+      load5:  Number(c.load5)  || 0,
+      load15: Number(c.load15) || 0,
+    },
+    net: {
+      recvTotal: Number(c.netBytesRecv) || 0,
+      sentTotal: Number(c.netBytesSent) || 0,
+    },
   };
 }
 
 async function pollOne(server){
   const slot = cache.get(server.id);
   try {
-    const data = await panelGet(server, `/api/v2/dashboard/current/all/all`);
+    const data = await panelGet(server, `/api/v2/dashboard/base/all/all`);
     const m = sanitize(data);
     if (!m) throw new Error('empty response');
     slot.prev = slot.cur;
     slot.cur = m;
     slot.online = true;
 
-    // Boot time is fixed for the life of the OS — parse it once on the first
-    // successful poll and reuse forever. If the host is rebooted, the proxy
-    // container is expected to be restarted alongside it (or you can manually
-    // restart 1panel-status); we deliberately do NOT re-derive bootTimeMs on
-    // every poll, because the 1Panel-reported string can drift by a second or
-    // two between samples and we don't want the uptime badge to flicker.
     if (slot.bootTimeMs == null && m.timeSinceUptime){
       const t = Date.parse(m.timeSinceUptime);
       if (!isNaN(t)) slot.bootTimeMs = t;
     }
   } catch (e) {
     slot.online = false;
-    // keep last known sample so the UI can show the last value if needed
   }
 }
 
@@ -154,7 +150,6 @@ async function pollAll(){
   await Promise.all(servers.map(pollOne));
 }
 
-// Build the public payload: rates are computed here from prev/cur deltas.
 function publicPayload(){
   return servers.map((s) => {
     const slot = cache.get(s.id);
@@ -163,33 +158,29 @@ function publicPayload(){
     if (cur && slot.prev){
       const dt = (cur.sampledAt - slot.prev.sampledAt) / 1000;
       if (dt > 0){
-        downRate = Math.max(0, (cur.netRecvTotal - slot.prev.netRecvTotal) / dt);
-        upRate   = Math.max(0, (cur.netSentTotal - slot.prev.netSentTotal) / dt);
+        downRate = Math.max(0, (cur.net.recvTotal - slot.prev.net.recvTotal) / dt);
+        upRate   = Math.max(0, (cur.net.sentTotal - slot.prev.net.sentTotal) / dt);
       }
     }
     return {
       name: s.name,
       online: slot.online,
-      // bootTimeMs is captured once (see pollOne) and is `null` until the very
-      // first successful poll. The browser falls back to "—" while null.
       bootTimeMs: slot.bootTimeMs ?? null,
       metrics: cur ? {
-        cpuPct:  cur.cpuPct,
-        memPct:  cur.memPct,
-        diskPct: cur.diskPct,
-        loadPct: cur.loadPct,
-
-        netRecvTotal: cur.netRecvTotal,
-        netSentTotal: cur.netSentTotal,
-        downRate,
-        upRate,
+        cpu:  cur.cpu,
+        mem:  cur.mem,
+        disk: cur.disk,
+        load: cur.load,
+        net: {
+          recvTotal: cur.net.recvTotal,
+          sentTotal: cur.net.sentTotal,
+          downRate,
+          upRate,
+        },
       } : null,
     };
   });
 }
-
-// ───────────────────────── http server ─────────────────────────
-const indexHtml = fs.readFileSync(path.join(__dirname, 'index.html'));
 
 const server = http.createServer((req, res) => {
   if (req.url === '/api/servers'){
@@ -206,17 +197,30 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (req.url === '/' || req.url === '/index.html'){
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-    res.end(indexHtml);
+    try {
+      const buf = fs.readFileSync(INDEX_PATH);
+      res.writeHead(200, {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-store',
+      });
+      res.end(buf);
+    } catch (e) {
+      res.writeHead(500, { 'Content-Type': 'text/plain' });
+      res.end('index.html read error: ' + e.message);
+    }
     return;
   }
   if (req.url === '/logo.png'){
     try {
-    const buf = fs.readFileSync(path.join(__dirname, 'logo.png'));
-    res.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400' });
-    res.end(buf);
-    return;
-  } catch {}
+      const buf = fs.readFileSync(LOGO_PATH);
+      res.writeHead(200, { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=86400' });
+      res.end(buf);
+      return;
+    } catch {
+      res.writeHead(404);
+      res.end('not found');
+      return;
+    }
   }
   res.writeHead(404);
   res.end('not found');
@@ -228,6 +232,5 @@ server.listen(LISTEN_PORT, () => {
   servers.forEach((s, i) => console.log(`    [${i}] ${s.name}`));
 });
 
-// Start the poll loop immediately, then on a fixed 2s interval
 pollAll();
 setInterval(pollAll, POLL_MS);
